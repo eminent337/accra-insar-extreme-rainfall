@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TERRA-HYDROS | Accra Urban Geodynamics & Flood Telemetry Platform</title>
+
+<!-- MapLibre GL JS (Cutting-edge Vector WebGL Engine) -->
+<link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+<!-- Chart.js for Live Telemetry -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg-base: #06090E;
+    --bg-surface: #0D131F;
+    --bg-card: #141D2E;
+    --bg-card-hover: #1C273C;
+    --border: #1E2D45;
+    --border-bright: #2E4366;
+    --accent: #0284C7;
+    --accent-glow: #38BDF8;
+    --critical: #EF4444;
+    --warning: #F59E0B;
+    --success: #10B981;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-tertiary: #64748B;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Top Global Header */
+  header.top-header {
+    height: 52px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 100;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-mark {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #0284C7, #0EA5E9);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: #FFF;
+    letter-spacing: -0.5px;
+  }
+
+  .project-name {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #FFF;
+  }
+
+  .project-tag {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .header-stats {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .stat-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .stat-title {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-tertiary);
+  }
+
+  .stat-number {
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Main Workspace Layout */
+  .workspace {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Left Sidebar: Controls & Analytics */
+  .sidebar {
+    width: 380px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-tertiary);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Slider Card */
+  .slider-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .slider-readout {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  .readout-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+  .readout-val { font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--accent-glow); }
+
+  input[type=range] {
+    width: 100%;
+    height: 4px;
+    background: var(--border-bright);
+    border-radius: 2px;
+    accent-color: var(--accent-glow);
+    cursor: pointer;
+  }
+
+  /* Layers Toggle Grid */
+  .layer-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .layer-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11.5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .layer-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-bright);
+  }
+
+  .layer-card.active {
+    border-color: var(--accent);
+    background: rgba(2, 132, 199, 0.15);
+  }
+
+  .layer-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* Hotspot Table */
+  .hotspot-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .hotspot-table th {
+    text-align: left;
+    font-size: 9.5px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hotspot-table td {
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(30, 45, 69, 0.4);
+    cursor: pointer;
+  }
+
+  .hotspot-table tr:hover td {
+    color: var(--accent-glow);
+  }
+
+  /* Telemetry Chart Container */
+  .chart-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    height: 160px;
+    position: relative;
+  }
+
+  /* Map Viewport */
+  #map {
+    flex: 1;
+    height: 100%;
+    background: #06090E;
+    position: relative;
+  }
+
+  /* Floating Floating Telemetry Overlay (Bottom Right) */
+  .floating-telemetry {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  }
+
+  .telemetry-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+  }
+
+  .color-bar {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+
+  /* Custom Clean MapLibre Popups */
+  .maplibregl-popup-content {
+    background: var(--bg-surface) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-bright) !important;
+    border-radius: 8px !important;
+    padding: 12px 14px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 11.5px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.6) !important;
+  }
+
+  .maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: var(--bg-surface) !important; }
+  .maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: var(--bg-surface) !important; }
+</style>
+</head>
+<body>
+
+  <!-- Top Global Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="logo-mark">TH</div>
+      <div>
+        <div class="project-name">TERRA-HYDROS // GREATER ACCRA GEODYNAMICS</div>
+        <div style="font-size: 10px; color: var(--text-tertiary);">Satellite InSAR Subsidence & Hydrodynamic Inundation Telemetry</div>
+      </div>
+      <div class="project-tag">PROD v2.4</div>
+    </div>
+
+    <div class="header-stats">
+      <div class="stat-block">
+        <span class="stat-title">Peak Subsidence Rate</span>
+        <span class="stat-number" style="color: var(--critical);">-35.0 mm/yr</span>
+      </div>
+      <div class="stat-block">
+        <span class="stat-title">50-Yr Storm Exceedance</span>
+        <span class="stat-number" style="color: var(--warning);">185.2 mm/day</span>
+      </div>
+      <div class="stat-block">
+        <span class="stat-title">Impaired Drainage Basin</span>
+        <span class="stat-number" style="color: var(--accent-glow);">48.9 km²</span>
+      </div>
+      <div class="stat-block">
+        <span class="stat-title">Active InSAR Points</span>
+        <span class="stat-number" style="color: var(--text-primary);">2,334 Targets</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <div class="workspace">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <!-- Scenario Controller -->
+      <div class="sidebar-section">
+        <div class="section-title">Design Storm Simulation Engine</div>
+        <div class="slider-box">
+          <div class="slider-readout">
+            <span class="readout-label">Return Period (T)</span>
+            <span class="readout-val" id="stormPeriodText">50-Year (185.2 mm)</span>
+          </div>
+          <input type="range" id="stormSlider" min="5" max="100" step="5" value="50" oninput="onStormChange(this.value)">
+          <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: var(--text-tertiary); margin-top: 6px;">
+            <span>5-Yr (69.8mm)</span>
+            <span>25-Yr (138.2mm)</span>
+            <span>100-Yr (247.9mm)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Geospatial Layer Controls -->
+      <div class="sidebar-section">
+        <div class="section-title">Geospatial Telemetry Layers</div>
+        <div class="layer-grid">
+          <div class="layer-card active" id="btn-insar" onclick="toggleLayer('insar')">
+            <span>Sentinel-1 InSAR Deformation Grid</span>
+            <div class="layer-indicator" style="background: var(--critical);"></div>
+          </div>
+          <div class="layer-card active" id="btn-bowls" onclick="toggleLayer('bowls')">
+            <span>Kinematic Subsidence Bowls</span>
+            <div class="layer-indicator" style="background: var(--warning);"></div>
+          </div>
+          <div class="layer-card active" id="btn-flood" onclick="toggleLayer('flood')">
+            <span>Dynamic Flood Inundation Envelopes</span>
+            <div class="layer-indicator" style="background: var(--accent-glow);"></div>
+          </div>
+          <div class="layer-card active" id="btn-assets" onclick="toggleLayer('assets')">
+            <span>Critical Infrastructure Vulnerability</span>
+            <div class="layer-indicator" style="background: var(--text-primary);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Critical Infrastructure Table -->
+      <div class="sidebar-section">
+        <div class="section-title">Critical Infrastructure Exposure</div>
+        <table class="hotspot-table">
+          <thead>
+            <tr>
+              <th>Facility</th>
+              <th style="text-align: right;">Sinking</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr onclick="flyToAsset(5.5592, -0.2085, 'Circle Interchange', '-32.1 mm/yr', 'Critical')">
+              <td><b>Circle Interchange</b><br><span style="color: var(--text-tertiary);">Odaw Basin Core</span></td>
+              <td style="text-align: right; color: var(--critical); font-family: 'JetBrains Mono', monospace;">-32.1 mm/yr</td>
+              <td style="text-align: right;"><span style="color: var(--critical); font-weight: 600;">Priority 1</span></td>
+            </tr>
+            <tr onclick="flyToAsset(5.5680, -0.3340, 'Weija Dam Barrier', '-22.9 mm/yr', 'Critical')">
+              <td><b>Weija Dam Downstream</b><br><span style="color: var(--text-tertiary);">Densu Floodplain</span></td>
+              <td style="text-align: right; color: var(--critical); font-family: 'JetBrains Mono', monospace;">-22.9 mm/yr</td>
+              <td style="text-align: right;"><span style="color: var(--critical); font-weight: 600;">Priority 1</span></td>
+            </tr>
+            <tr onclick="flyToAsset(5.5170, -0.2790, 'Glefe Coastal Road', '-30.8 mm/yr', 'Critical')">
+              <td><b>Glefe Embankment</b><br><span style="color: var(--text-tertiary);">Wetland Subsidence</span></td>
+              <td style="text-align: right; color: var(--critical); font-family: 'JetBrains Mono', monospace;">-30.8 mm/yr</td>
+              <td style="text-align: right;"><span style="color: var(--critical); font-weight: 600;">Priority 1</span></td>
+            </tr>
+            <tr onclick="flyToAsset(5.5385, -0.2285, 'Korle Bu Hospital', '-13.9 mm/yr', 'Moderate')">
+              <td><b>Korle Bu Hospital</b><br><span style="color: var(--text-tertiary);">Teaching Hospital</span></td>
+              <td style="text-align: right; color: var(--warning); font-family: 'JetBrains Mono', monospace;">-13.9 mm/yr</td>
+              <td style="text-align: right;"><span style="color: var(--warning); font-weight: 600;">Priority 2</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Historical Time-Series Mini Chart -->
+      <div class="sidebar-section" style="flex: 1;">
+        <div class="section-title">Kwame Nkrumah Circle InSAR Velocity History</div>
+        <div class="chart-box">
+          <canvas id="subsidenceChart"></canvas>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Map Canvas -->
+    <div id="map"></div>
+
+    <!-- Floating Telemetry Legend -->
+    <div class="floating-telemetry">
+      <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-tertiary);">Vertical Subsidence (v_vert)</div>
+      <div class="telemetry-row">
+        <div class="color-bar" style="background: #EF4444;"></div>
+        <span>Severe Sinking (&lt; -25 mm/yr)</span>
+      </div>
+      <div class="telemetry-row">
+        <div class="color-bar" style="background: #F59E0B;"></div>
+        <span>Moderate Subsidence (-15 to -25 mm/yr)</span>
+      </div>
+      <div class="telemetry-row">
+        <div class="color-bar" style="background: #38BDF8;"></div>
+        <span>Stable / Neutral (&gt; -3 mm/yr)</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize MapLibre GL Map (Clean High-FPS Canvas)
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: {
+        version: 8,
+        sources: {
+          'satellite': {
+            type: 'raster',
+            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+            tileSize: 256
+          }
+        },
+        layers: [
+          {
+            id: 'satellite-layer',
+            type: 'raster',
+            source: 'satellite',
+            paint: { 'raster-opacity': 0.85 }
+          }
+        ]
+      },
+      center: [-0.2111, 5.5600],
+      zoom: 12,
+      pitch: 35, // 3D Camera Angle
+      bearing: -10
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    // GeoJSON Data Sources
+    const subsidenceBowlsGeoJSON = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { name: "Kwame Nkrumah Circle Subsidence Bowl", max_sinking: "-35.0 mm/yr", area: "22.3 km²", status: "Critical Drainage Failure" },
+          geometry: { type: "Polygon", coordinates: [[
+            [-0.235, 5.540], [-0.210, 5.525], [-0.185, 5.545], [-0.195, 5.575], [-0.230, 5.570], [-0.235, 5.540]
+          ]] }
+        },
+        {
+          type: "Feature",
+          properties: { name: "Weija Downstream Floodplain Bowl", max_sinking: "-28.3 mm/yr", area: "19.5 km²", status: "Floodplain Deposition" },
+          geometry: { type: "Polygon", coordinates: [[
+            [-0.345, 5.560], [-0.315, 5.550], [-0.300, 5.580], [-0.330, 5.600], [-0.350, 5.585], [-0.345, 5.560]
+          ]] }
+        },
+        {
+          type: "Feature",
+          properties: { name: "Glefe Coastal Lagoon Bowl", max_sinking: "-32.2 mm/yr", area: "7.2 km²", status: "Wetland Inundation" },
+          geometry: { type: "Polygon", coordinates: [[
+            [-0.295, 5.505], [-0.265, 5.505], [-0.260, 5.530], [-0.290, 5.535], [-0.295, 5.505]
+          ]] }
+        }
+      ]
+    };
+
+    map.on('load', () => {
+      // 1. Add Subsidence Bowls Layer
+      map.addSource('subsidence-bowls', {
+        type: 'geojson',
+        data: subsidenceBowlsGeoJSON
+      });
+
+      map.addLayer({
+        id: 'bowls-fill',
+        type: 'fill',
+        source: 'subsidence-bowls',
+        paint: {
+          'fill-color': '#EF4444',
+          'fill-opacity': 0.25
+        }
+      });
+
+      map.addLayer({
+        id: 'bowls-outline',
+        type: 'line',
+        source: 'subsidence-bowls',
+        paint: {
+          'line-color': '#EF4444',
+          'line-width': 2,
+          'line-dasharray': [3, 2]
+        }
+      });
+
+      // 2. Add Critical Assets Markers
+      const assets = [
+        { name: "Circle Interchange", coords: [-0.2085, 5.5592], rate: "-32.1 mm/yr", prio: "Priority 1" },
+        { name: "Korle Bu Hospital", coords: [-0.2285, 5.5385], rate: "-13.9 mm/yr", prio: "Priority 2" },
+        { name: "Weija Dam Barrier", coords: [-0.3340, 5.5680], rate: "-22.9 mm/yr", prio: "Priority 1" },
+        { name: "Glefe Coastal Road", coords: [-0.2790, 5.5170], rate: "-30.8 mm/yr", prio: "Priority 1" },
+        { name: "Kotoka Airport", coords: [-0.1702, 5.6052], rate: "-0.6 mm/yr", prio: "Stable" }
+      ];
+
+      assets.forEach(a => {
+        const el = document.createElement('div');
+        el.style.width = '12px';
+        el.style.height = '12px';
+        el.style.borderRadius = '50%';
+        el.style.background = a.prio.includes('1') ? '#EF4444' : (a.prio.includes('2') ? '#F59E0B' : '#38BDF8');
+        el.style.border = '2px solid #FFF';
+        el.style.boxShadow = '0 0 10px rgba(0,0,0,0.8)';
+        el.style.cursor = 'pointer';
+
+        const popup = new maplibregl.Popup({ offset: 15 }).setHTML(`
+          <b>${a.name}</b><br>
+          <span style="color: var(--text-tertiary);">InSAR Rate:</span> <b style="color: #EF4444;">${a.rate}</b><br>
+          <span style="color: var(--text-tertiary);">Action:</span> <b>${a.prio}</b>
+        `);
+
+        new maplibregl.Marker(el)
+          .setLngLat(a.coords)
+          .setPopup(popup)
+          .addTo(map);
+      });
+    });
+
+    // Chart.js Live InSAR Subsidence Telemetry
+    const ctx = document.getElementById('subsidenceChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['2018', '2019', '2020', '2021', '2022', '2023', '2024'],
+        datasets: [{
+          label: 'Cumulative Sinking (mm)',
+          data: [0, -31.4, -65.2, -98.7, -134.1, -170.8, -208.5],
+          borderColor: '#EF4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#EF4444'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { font: { size: 9 }, color: '#64748B' } },
+          y: { grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { font: { size: 9 }, color: '#64748B' } }
+        }
+      }
+    });
+
+    function flyToAsset(lat, lon, name, rate, status) {
+      map.flyTo({ center: [lon, lat], zoom: 14, pitch: 45, duration: 2000 });
+    }
+
+    function onStormChange(val) {
+      const mm = Math.round(35 + 2.12 * val);
+      document.getElementById('stormPeriodText').innerText = val + "-Year (" + mm + " mm)";
+      if (map.getLayer('bowls-fill')) {
+        map.setPaintProperty('bowls-fill', 'fill-opacity', (val / 100) * 0.45);
+      }
+    }
+  </script>
+</body>
+</html>
