@@ -58,3 +58,9 @@ from .visualizer import (
 from .report_generator import (
     HazardReportGenerator,
 )
+
+from .pinn_solver import (
+    HydroInSARPINN,
+    PhysicsInformedHazardSolver,
+    PINNTrainingResult,
+)
